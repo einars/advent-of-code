@@ -69,23 +69,20 @@ td-yn")
                 #{node hop computer}))))))))
 
 (defn grow-set [members net]
-  ;(prn :grow members)
-  (loop [[candidate & rest] (keys net)]
+  (loop [members members, [candidate & rest] (keys net)]
     (cond
       (nil? candidate) members
-      (members candidate) (recur rest)
-      (every? #((net candidate) %) members) (grow-set (conj members candidate) net)
-      :else (recur rest))))
+      (members candidate) (recur members rest)
+      (every? #((net candidate) %) members) (recur (conj members candidate) rest)
+      :else (recur members rest))))
 
 (defn find-fat-set [net]
   (first (sort-by (comp - count) (mapv #(grow-set #{%} net) (keys net)))))
 
 
-
 (defn pt1
   [task]
   (count (find-3 task)))
-
 
 (defn pt2
   [task]
