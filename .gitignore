@@ -15,3 +15,5 @@ pom.xml.asc
 .hg/
 /aoc-2021
 /src/user.clj
+/.clj-kondo
+/.lsp
