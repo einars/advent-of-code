@@ -31,11 +31,7 @@
 
             moved-zero? (if (= dir \L)
                           (and (>= n cur-n) (not= cur-n 0))
-                          (> n (- 99 cur-n)))
-            ]
-        ;(if moved-zero?
-        ;  (prn :ZERO cur-n dir n :-> np)
-        ;  (prn :none cur-n dir n :-> np))
+                          (> n (- 99 cur-n)))]
         (recur np (if moved-zero? (inc zeros) zeros) (rest dir-amounts)))
       zeros)))
 
