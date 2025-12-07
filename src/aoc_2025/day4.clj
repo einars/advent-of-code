@@ -11,9 +11,21 @@
   (count (filter #(< % 4) (for [k (keys m)]
                             (count (filter #{\@} (map m (h/neighbors-8 k))))))))
 
+(defn to-remove [m]
+  (filter
+    (fn [k]
+      (< (count (filter #{\@} (map m (h/neighbors-8 k)))) 4))
+    (keys m)))
 
+(defn remove-rolls [m rolls]
+  (reduce dissoc m rolls))
 
-(pt1 (h/slurp-map sample-file))
+(defn pt2 [m]
+  (loop [n-removed 0, m m]
+    (let [available (to-remove m)]
+      (if (empty? available)
+        n-removed
+        (recur (+ n-removed (count available)) (remove-rolls m available))))))
 
 (defn solve-1 
   ([] (solve-1 input-file))
@@ -21,7 +33,7 @@
 
 (defn solve-2 
   ([] (solve-2 input-file))
-  ([f] (prn (h/slurp-strings f))))
+  ([f] (pt2 (h/slurp-map f))))
 
 (deftest tests []
   (are [x y] (= x y)
