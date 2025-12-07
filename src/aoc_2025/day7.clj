@@ -8,6 +8,9 @@
 
 (def input-file "resources/2025/day7.txt")
 
+(defn read-playground [f]
+  (h/slurp-xy-map f))
+
 (defn make-beam [m]
   (let [s-pos (first (h/find-keys #{\S} m))]
     #{(:x s-pos)}))
@@ -15,9 +18,6 @@
 (defn make-timeline-beam [m]
   (let [s-pos (first (h/find-keys #{\S} m))]
     {(:x s-pos) 1}))
-
-(defn read-playground [f]
-  (h/slurp-xy-map f))
 
 (defn count-tachyon-splits 
   ([m {:keys [y]}] 
@@ -39,10 +39,9 @@
   ([m {:keys [y]}] 
    (loop [beam (make-timeline-beam m), y-pos 1]
      (if (= y-pos y)
-       beam
+       (reduce + (vals beam))
 
        (let [new-beam (reduce (fn [nb [x n-timelines]]
-
                                 (if (= (get m {:y y-pos :x x}) \^)
                                   (-> nb
                                     (update (dec x) (fn [old-val] (+ n-timelines (or old-val 0))))
@@ -53,15 +52,13 @@
          (recur new-beam (inc y-pos)))))))
 
 
-(let [[m d] (read-playground sample-file)]
-  (count-tachyon-splits m d))
-
 (defn solve-1 
   ([] (let [[m d] (read-playground input-file)]
         (count-tachyon-splits m d))))
 
 (defn solve-2
-  ([] (slurp input-file)))
+  ([] (let [[m d] (read-playground input-file)]
+        (count-timelines m d))))
 
 (deftest tests []
   (are [x y] (= x y)
