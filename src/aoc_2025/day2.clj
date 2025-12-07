@@ -27,8 +27,26 @@
           b (mod n hb)]
       (= a b))))
 
+(defn is-invalid-pt2 
+  ([n] (is-invalid-pt2 (str n) 1))
+  ([s frag-len] 
+   (let [times (quot (count s) frag-len)
+         frag (subs s 0 frag-len)
+         test (str/join (repeat times frag))]
+     (if (< times 2)
+       false
+       (if (= test s)
+         true
+         (recur s (inc frag-len)))))))
+
+
+
+
 (defn invalid-in-range [from to]
   (filter is-invalid-id (range from (inc to))))
+
+(defn invalid-in-range-pt2 [from to]
+  (filter is-invalid-pt2 (range from (inc to))))
 
 (defn make-range [s]
   (let [[a b] (str/split s #"-")]
@@ -46,13 +64,18 @@
   ([] (reduce + 0 (mapcat (fn [[a b]] (invalid-in-range a b)) (read-ranges "resources/2025/day2.txt")))))
 
 (defn solve-2
-  ([] ()))
+  ([] (reduce + 0 (mapcat (fn [[a b]] (invalid-in-range-pt2 a b)) (read-ranges "resources/2025/day2.txt")))))
 
 (deftest tests []
   (are [x y] (= x y)
     1227775554 (reduce + 0 (mapcat (fn [[a b]] (invalid-in-range a b)) (parse-ranges test-ranges)))
+    4174379265 (reduce + 0 (mapcat (fn [[a b]] (invalid-in-range-pt2 a b)) (parse-ranges test-ranges)))
     1 (count (invalid-in-range 1188511880 1188511890))
-    2 (count (invalid-in-range 11 22))))
+    2 (count (invalid-in-range 11 22))
+    true (is-invalid-pt2 212121)
+    false (is-invalid-pt2 12)
+    '(11 22) (invalid-in-range-pt2 11 22)
+    '(99 111) (invalid-in-range-pt2 99 115)))
 
 (comment
   (solve-1)
