@@ -23,10 +23,36 @@
         numbers (mapv parse-long numbers)]
     (count (filter #(is-fresh? % ranges) numbers))))
 
+(defn overlaps? [[lo1 hi1] [lo2 hi2]]
+  (or (<= lo2 lo1 hi2)
+    (<= lo2 hi1 hi2)
+    (<= lo1 lo2 hi1) 
+    (<= lo1 hi2 hi1)))
 
-(pt1 (h/slurp-blocks sample-file))
+(defn join-ranges [[lo1 hi1] [lo2 hi2]]
+  [(min lo1 lo2) (max hi1 hi2)])
+
+(defn pack-maximum [r pool]
+  (if-let [maybe-overlapping (first (filter #(overlaps? r %) pool))]
+    (recur (join-ranges r maybe-overlapping) (filter #(not= % maybe-overlapping) pool))
+    [r pool]))
+
+(defn range-width [[lo hi]]
+  (inc (- hi lo)))
+
+(defn calc-range-width [ranges]
+  (loop [r (first ranges), pool (rest ranges), accu 0]
+    ;(prn :packing r :pool pool)
+    (let [[r pool] (pack-maximum r pool)]
+      ;(prn :packed-to r :new-pool pool :rw (range-width r))
+      (if (seq pool)
+        (recur (first pool) (rest pool) (+ accu (range-width r)))
+        (+ accu (range-width r))))))
 
 
+(defn pt2 [[ranges _]]
+  (let [ranges (mapv make-range ranges)]
+    (calc-range-width ranges)))
 
 (defn solve-1 
   ([] (solve-1 input-file))
@@ -34,7 +60,7 @@
 
 (defn solve-2 
   ([] (solve-2 input-file))
-  ([f] (prn (h/slurp-strings f))))
+  ([f] (pt2 (h/slurp-blocks f))))
 
 (deftest tests []
   (are [x y] (= x y)
