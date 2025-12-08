@@ -52,13 +52,30 @@
                            (join-boxes boxes circs)
                            ) circs dists))))
 
+(defn pt2-score [box-pair]
+  (let [[box1 box2] (vec box-pair)]
+    (* (first box1) (first box2))))
+
+(defn pt2 [f]
+  (let [boxes (read-problem f)
+        box-pairs (map :boxes (sort-by :dist (dist-pairs boxes)))]
+
+    (loop [box-pairs box-pairs, circs (create-circuits boxes)]
+      (let [box-pair (first box-pairs)
+            new-circs (join-boxes box-pair circs)]
+        (if (= 1 (count new-circs))
+          (pt2-score box-pair)
+          (recur (rest box-pairs) new-circs))))))
+
+(pt2 sample-file)
+
 (defn solve-1 
   ([] (solve-1 input-file))
   ([f] (pt1 f 1000)))
 
 (defn solve-2 
   ([] (solve-2 input-file))
-  ([f] (prn (h/slurp-strings f))))
+  ([f] (pt2 f)))
 
 (deftest tests []
   (are [x y] (= x y)
