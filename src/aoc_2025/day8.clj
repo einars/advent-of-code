@@ -40,7 +40,7 @@
       circs ; no join needed
       (conj without-b (set/union c0 c1)))))
 
-(defn mul-lengths [xs]
+(defn pt1-score [xs]
   (reduce * (take 3 (reverse (sort (map count xs))))))
 
 (defn pt1 [f n]
@@ -48,9 +48,9 @@
         dists (take n (sort-by :dist (dist-pairs boxes)))
         circs (create-circuits boxes)]
     
-    (mul-lengths (reduce (fn [circs {:keys [boxes]}]
-                           (join-boxes boxes circs)
-                           ) circs dists))))
+    (pt1-score (reduce (fn [circs {:keys [boxes]}]
+                         (join-boxes boxes circs)
+                         ) circs dists))))
 
 (defn pt2-score [box-pair]
   (let [[box1 box2] (vec box-pair)]
@@ -67,8 +67,6 @@
           (pt2-score box-pair)
           (recur (rest box-pairs) new-circs))))))
 
-(pt2 sample-file)
-
 (defn solve-1 
   ([] (solve-1 input-file))
   ([f] (pt1 f 1000)))
@@ -79,7 +77,8 @@
 
 (deftest tests []
   (are [x y] (= x y)
-    99 (or 99 115)))
+    40 (pt1 sample-file 10)
+    25272 (pt2 sample-file)))
 
 (comment
   (solve-1)
