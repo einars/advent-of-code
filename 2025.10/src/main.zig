@@ -10,22 +10,23 @@ const Io = std.Io;
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 const allocator = gpa.allocator();
 
+const c = @cImport({
+    @cInclude("z3.h");
+});
+
 const Prob = struct {
     lights: []const u8,
     wirings: []const []const u32,
     joltage: []const u32,
 
     pub fn deinit(self: *Prob) void {
+        std.debug.print("DEINITING PROB\n");
         for (self.wirings) |w|
             allocator.free(w);
         allocator.free(self.lights);
         allocator.free(self.joltage);
     }
 };
-
-const c = @cImport({
-    @cInclude("z3.h");
-});
 
 fn listOfInts(str: []const u8) ![]const u32 {
     var out: std.ArrayList(u32) = .empty;
@@ -49,10 +50,6 @@ fn parseWiring(str: []const u8) ![]const u32 {
 }
 
 pub fn parseProblem(line: []const u8) !Prob {
-    var pos: usize = 0;
-    while (pos < line.len and std.ascii.isWhitespace(line[pos]))
-        pos += 1;
-
     var lights: []const u8 = undefined;
     var wirings: std.ArrayList([]const u32) = .empty;
     var joltage: []const u32 = undefined;
@@ -88,11 +85,11 @@ pub fn readProblems(filename: []const u8) ![]const Prob {
 
     while (try reader.interface.takeDelimiter('\n')) |line| {
         const prob = try parseProblem(line);
-        std.debug.print("lights: {any}\n", .{prob.lights});
-        std.debug.print("joltage: {any}\n", .{prob.joltage});
-        for (prob.wirings) |w| {
-            std.debug.print(" W: {any}\n", .{w});
-        }
+        // std.debug.print("lights: {any}\n", .{prob.lights});
+        // std.debug.print("joltage: {any}\n", .{prob.joltage});
+        // for (prob.wirings) |w| {
+        //     std.debug.print(" W: {any}\n", .{w});
+        // }
         try problems.append(allocator, prob);
     }
 
@@ -115,7 +112,11 @@ fn extractSolution(ctx: c.Z3_context, model: c.Z3_model, vars: std.ArrayList(c.Z
     return sum;
 }
 
-fn z3solve(ctx: c.Z3_context, prob: Prob) !usize {
+fn z3solve(prob: Prob) !usize {
+    const cfg = c.Z3_mk_config();
+    const ctx = c.Z3_mk_context(cfg);
+    defer c.Z3_del_context(ctx);
+
     const solver = c.Z3_mk_solver(ctx);
     const int_sort = c.Z3_mk_int_sort(ctx);
 
@@ -131,8 +132,7 @@ fn z3solve(ctx: c.Z3_context, prob: Prob) !usize {
     for (0..prob.wirings.len) |i| {
         const name = try std.fmt.allocPrintSentinel(allocator, "c{}", .{i}, 0);
         defer allocator.free(name);
-        const sym = c.Z3_mk_string_symbol(ctx, name);
-        const v = c.Z3_mk_const(ctx, sym, int_sort);
+        const v = c.Z3_mk_const(ctx, c.Z3_mk_string_symbol(ctx, name), int_sort);
         try vars.append(allocator, v);
 
         c.Z3_solver_assert(ctx, solver, c.Z3_mk_ge(ctx, v, zero));
@@ -158,22 +158,17 @@ fn z3solve(ctx: c.Z3_context, prob: Prob) !usize {
         const model = c.Z3_solver_get_model(ctx, solver);
         c.Z3_model_inc_ref(ctx, model);
         defer c.Z3_model_dec_ref(ctx, model);
-        std.debug.print("SAT {s}\n", .{c.Z3_model_to_string(ctx, model)});
-        const s = extractSolution(ctx, model, vars);
-        solution = s;
-        std.debug.print("solution = {?}\n", .{solution});
+        // std.debug.print("SAT {s}\n", .{c.Z3_model_to_string(ctx, model)});
+        solution = extractSolution(ctx, model, vars);
+        std.debug.print("  {?}\n", .{solution});
 
         // add blocker:
         // x1+x2+...  < this_solution
         const sum = c.Z3_mk_add(ctx, @intCast(vars.items.len), vars.items.ptr);
-        c.Z3_solver_assert(ctx, solver, c.Z3_mk_lt(ctx, sum, c.Z3_mk_int(ctx, @intCast(s), int_sort)));
+        c.Z3_solver_assert(ctx, solver, c.Z3_mk_lt(ctx, sum, c.Z3_mk_int(ctx, @intCast(solution.?), int_sort)));
     }
 
-    if (solution) |best| {
-        std.debug.print("SOLVED AS {}\n", .{best});
-        return best;
-    }
-    return error.Unsolveable;
+    return solution orelse error.Unsolvable;
 }
 
 pub fn main() !void {
@@ -183,13 +178,10 @@ pub fn main() !void {
 
     std.debug.print("got {} problems!\n", .{problems.len});
 
-    const cfg = c.Z3_mk_config();
-    const ctx = c.Z3_mk_context(cfg);
-
     var overall_score: usize = 0;
     for (problems, 0..) |p, i| {
         std.debug.print("Solving {}:\n", .{i});
-        overall_score += try z3solve(ctx, p);
+        overall_score += try z3solve(p);
     }
     std.debug.print("Totes: {}\n", .{overall_score});
 }
